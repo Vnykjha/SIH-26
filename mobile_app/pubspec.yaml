@@ -1,0 +1,28 @@
+name: crepisense
+description: AI-Assisted OA Risk Screening for NER — offline-first mobile screening engine.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  tflite_flutter: ^0.10.4
+  sensors_plus: ^5.0.0
+  firebase_core: ^2.27.0
+  cloud_firestore: ^4.15.5
+  uuid: ^4.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/model.tflite
+    - assets/scaler_params.json
