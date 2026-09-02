@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/patient.dart';
 import 'questionnaire_screen.dart';
 
@@ -24,7 +25,6 @@ class _IntakeScreenState extends State<IntakeScreen> {
   Gender _selectedGender = Gender.male;
   int _age = 45;
   bool _priorInjury = false;
-  String _preferredLanguage = 'en';
 
   @override
   void dispose() {
@@ -50,7 +50,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
       weightKg: double.tryParse(_weightController.text.trim()) ?? 70.0,
       priorInjuryHistory: _priorInjury,
       injuryNotes: _injuryNotesController.text.trim(),
-      preferredLanguage: _preferredLanguage,
+      preferredLanguage: Localizations.localeOf(context).languageCode,
       campId: _campController.text.trim().isEmpty ? 'camp-01' : _campController.text.trim(),
       district: _districtController.text.trim().isEmpty ? 'Unknown' : _districtController.text.trim(),
     );
@@ -65,9 +65,11 @@ class _IntakeScreenState extends State<IntakeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Patient Intake'),
+        title: Text(loc.tr('patientIntake')),
       ),
       body: SafeArea(
         child: Form(
@@ -77,8 +79,8 @@ class _IntakeScreenState extends State<IntakeScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Patient name'),
-                validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                decoration: InputDecoration(labelText: loc.tr('patientName')),
+                validator: (value) => value == null || value.trim().isEmpty ? loc.tr('required') : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -87,7 +89,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
                     child: TextFormField(
                       initialValue: _age.toString(),
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Age'),
+                      decoration: InputDecoration(labelText: loc.tr('age')),
                       onChanged: (value) => _age = int.tryParse(value) ?? 45,
                     ),
                   ),
@@ -95,7 +97,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
                   Expanded(
                     child: DropdownButtonFormField<Gender>(
                       initialValue: _selectedGender,
-                      decoration: const InputDecoration(labelText: 'Sex'),
+                      decoration: InputDecoration(labelText: loc.tr('sex')),
                       items: Gender.values
                           .map(
                             (gender) => DropdownMenuItem(
@@ -112,7 +114,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _occupationController,
-                decoration: const InputDecoration(labelText: 'Occupation'),
+                decoration: InputDecoration(labelText: loc.tr('occupation')),
               ),
               const SizedBox(height: 12),
               Row(
@@ -121,7 +123,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
                     child: TextFormField(
                       controller: _heightController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Height (cm)'),
+                      decoration: InputDecoration(labelText: loc.tr('heightCm')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -129,51 +131,37 @@ class _IntakeScreenState extends State<IntakeScreen> {
                     child: TextFormField(
                       controller: _weightController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Weight (kg)'),
+                      decoration: InputDecoration(labelText: loc.tr('weightKg')),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               SwitchListTile(
-                title: const Text('Prior injury history'),
+                title: Text(loc.tr('priorInjuryHistory')),
                 value: _priorInjury,
                 onChanged: (value) => setState(() => _priorInjury = value),
               ),
               TextFormField(
                 controller: _injuryNotesController,
-                decoration: const InputDecoration(labelText: 'Injury notes (optional)'),
+                decoration: InputDecoration(labelText: loc.tr('injuryNotes')),
                 maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _preferredLanguage,
-                decoration: const InputDecoration(labelText: 'Preferred language'),
-                items: const [
-                  DropdownMenuItem(value: 'en', child: Text('English')),
-                  DropdownMenuItem(value: 'as', child: Text('Assamese')),
-                  DropdownMenuItem(value: 'bn', child: Text('Bengali')),
-                  DropdownMenuItem(value: 'hi', child: Text('Hindi')),
-                  DropdownMenuItem(value: 'mni', child: Text('Meitei')),
-                  DropdownMenuItem(value: 'ne', child: Text('Nepali')),
-                ],
-                onChanged: (value) => setState(() => _preferredLanguage = value ?? 'en'),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _campController,
-                decoration: const InputDecoration(labelText: 'Camp ID'),
+                decoration: InputDecoration(labelText: loc.tr('campId')),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _districtController,
-                decoration: const InputDecoration(labelText: 'District'),
-                validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                decoration: InputDecoration(labelText: loc.tr('district')),
+                validator: (value) => value == null || value.trim().isEmpty ? loc.tr('required') : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _submit,
-                child: const Text('Continue to questionnaire'),
+                child: Text(loc.tr('continueQuestionnaire')),
               ),
             ],
           ),

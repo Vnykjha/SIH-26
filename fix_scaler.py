@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "ml_model" / "data" / "oa_risk_dataset.csv"
+DATA_PATH = BASE_DIR / "ml_model" / "data" / "oa_risk_dataset.csv"`
 ASSET_SCALER_PATH = BASE_DIR / "mobile_app" / "assets" / "scaler_params.json"
 
 FEATURE_COLUMNS = [
