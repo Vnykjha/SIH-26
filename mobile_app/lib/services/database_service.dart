@@ -20,8 +20,9 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -56,6 +57,7 @@ class DatabaseService {
         kinetic_energy REAL NOT NULL,
         imu_puck_features_json TEXT,
         risk_level TEXT NOT NULL,
+        kl_grade INTEGER,
         confidence REAL NOT NULL,
         model_version TEXT NOT NULL,
         computed_at TEXT NOT NULL,
@@ -68,6 +70,14 @@ class DatabaseService {
     await db.execute('CREATE INDEX idx_screenings_synced ON screenings(synced)');
     await db.execute('CREATE INDEX idx_screenings_patient ON screenings(patient_id)');
     await db.execute('CREATE INDEX idx_screenings_created ON screenings(created_at)');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE screenings ADD COLUMN kl_grade INTEGER');
+      } catch (_) {}
+    }
   }
 
   Future<int> insertScreening(Screening screening) async {

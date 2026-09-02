@@ -1,0 +1,72 @@
+{
+  "dataset_name": "synthetic_knee_oa_screening_dataset",
+  "n_records": 1500,
+  "random_seed": 42,
+  "is_synthetic": true,
+  "generation_method": "domain-aware parametric simulation (numpy), not pure random / not resampled from any real dataset",
+  "purpose": [
+    "ML model training/prototyping for the on-device risk classifier",
+    "Demo app testing end-to-end (intake -> mobility test -> risk output)",
+    "Model validation / pipeline smoke-testing before real field data is available"
+  ],
+  "clinical_grounding": {
+    "KL_grade_distribution": {
+      "0": 0.3,
+      "1": 0.22,
+      "2": 0.23,
+      "3": 0.17,
+      "4": 0.08
+    },
+    "TUG_reference_values_seconds": {
+      "healthy_older_adults_60_80yo": "~8.2-10.6s (mean, by age/sex)",
+      "knee_OA_patients_grade_1_3": "~13.5-16.7s (mean, high SD)",
+      "severe_impairment_threshold": ">20-30s",
+      "source_note": "Used only to set the direction/rough magnitude of total_time by severity; values are re-simulated, not resampled from source studies."
+    },
+    "core_correlation_logic": "A single latent severity_index (0-1) is computed per patient from KL_grade (60% weight), age (25% weight), and BMI (15% weight), plus small Gaussian noise. All downstream features (pain/stiffness/function scores, total_time, stand_up_time, acceleration/velocity/force/power) are sampled as noisy functions of this shared severity_index, so correlations are internally consistent across each row instead of being independently randomized per column.",
+    "label_noise": "8% of risk_label values are randomly shifted one category up or down from the KL-grade-based mapping, to simulate real-world disagreement between symptom/mobility-based screening risk and radiographic grade, and to avoid perfectly separable classes."
+  },
+  "columns": {
+    "patient_level": [
+      "patient_id",
+      "age",
+      "sex",
+      "BMI",
+      "height_cm",
+      "weight_kg",
+      "knee_pain_score",
+      "stiffness_score",
+      "functional_limit_score",
+      "activity_level",
+      "prior_injury",
+      "smoking_status",
+      "comorbidities",
+      "symptom_duration_months",
+      "mobility_test_type",
+      "KL_grade",
+      "risk_label",
+      "final_risk_score"
+    ],
+    "accelerometer_derived": [
+      "total_time",
+      "movement_time",
+      "reaction_time",
+      "max_acceleration",
+      "min_acceleration",
+      "max_relative_acceleration",
+      "min_relative_acceleration",
+      "max_velocity",
+      "min_velocity",
+      "average_velocity",
+      "max_force",
+      "min_force",
+      "average_force",
+      "max_power",
+      "min_power",
+      "average_power",
+      "relative_power",
+      "stand_up_time"
+    ]
+  },
+  "disclaimer": "This dataset is entirely SYNTHETIC and intended for prototyping and demo purposes only. It is not derived from real patients, has not been clinically validated, and must not be used for actual diagnosis, published clinical research claims, or regulatory submissions. Replace with real, ethically sourced and IRB-approved field data before any clinical use."
+}

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'database_service.dart';
-import '../models/screening.dart';
 
 class SyncResult {
   final int syncedCount;

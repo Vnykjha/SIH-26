@@ -42,21 +42,23 @@ class AccelerometerFeatureExtractor {
     final endTime = readings.last.timestampMs;
     final durationSeconds = (endTime - startTime) / 1000.0;
 
+    // Calculate magnitude vectors m = sqrt(x^2 + y^2 + z^2) in Gs (9.81 m/s^2)
     final magnitudes = readings.map((r) {
       final mag = sqrt(r.x * r.x + r.y * r.y + r.z * r.z) / 9.81;
       return mag;
     }).toList();
 
+    // 1. Peak Acceleration
     final peakAccel = magnitudes.reduce(max);
+
+    // 2. Mean and Variance
     final meanMag = magnitudes.reduce((a, b) => a + b) / magnitudes.length;
-    final varianceSum = magnitudes.fold(
-      0.0,
-      (prev, m) => prev + (m - meanMag) * (m - meanMag),
-    );
+    final varianceSum = magnitudes.fold(0.0, (prev, m) => prev + (m - meanMag) * (m - meanMag));
     final accelVariance = varianceSum / magnitudes.length;
 
+    // 3. Cadence Estimation (Step detection using peak threshold above mean)
     int stepPeaks = 0;
-    final stepThreshold = meanMag + 0.3;
+    final stepThreshold = meanMag + 0.25;
     bool aboveThreshold = false;
 
     for (final mag in magnitudes) {
@@ -69,11 +71,10 @@ class AccelerometerFeatureExtractor {
     }
 
     final cadenceCps = durationSeconds > 0 ? stepPeaks / durationSeconds : 0.0;
-    final dynamicComponentSum = magnitudes.fold(
-      0.0,
-      (prev, m) => prev + (m - 1.0) * (m - 1.0),
-    );
-    final kineticEnergy = dynamicComponentSum / magnitudes.length;
+
+    // 4. Kinetic Energy Proxy (Integral of squared magnitude dynamic component)
+    final dynamicComponentSum = magnitudes.fold(0.0, (prev, m) => prev + (m - 1.0) * (m - 1.0));
+    final kineticEnergy = dynamicComponentSum / (magnitudes.length > 0 ? magnitudes.length : 1);
 
     return ExtractedAccelFeatures(
       durationSeconds: double.parse(durationSeconds.toStringAsFixed(2)),

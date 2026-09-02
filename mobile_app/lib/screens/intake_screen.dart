@@ -94,7 +94,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<Gender>(
-                      value: _selectedGender,
+                      initialValue: _selectedGender,
                       decoration: const InputDecoration(labelText: 'Sex'),
                       items: Gender.values
                           .map(
@@ -147,7 +147,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _preferredLanguage,
+                initialValue: _preferredLanguage,
                 decoration: const InputDecoration(labelText: 'Preferred language'),
                 items: const [
                   DropdownMenuItem(value: 'en', child: Text('English')),

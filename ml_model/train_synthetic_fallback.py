@@ -1,13 +1,10 @@
 """
-CREPISENSE risk-classifier training pipeline.
-
-This implementation trains a TensorFlow model directly on the synthetic OA dataset.
-The target is KL grade (0-4), which is then mapped to the app-facing risk labels:
-Low = KL 0-1, Medium = KL 2, High = KL 3-4.
+Synthetic fallback training pipeline for the OA screening app.
+This script trains a KL-grade model using the Claude-generated synthetic dataset
+and writes the artifacts expected by the mobile app.
 """
 
 import json
-import pickle
 from pathlib import Path
 
 import numpy as np
@@ -18,11 +15,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "data" / "oa_risk_dataset.csv"
+ROOT_DIR = BASE_DIR.parent
+DATASET_PATH = ROOT_DIR / "claude gen files" / "synthetic_knee_oa_dataset.csv"
 MODEL_PATH = BASE_DIR / "data" / "oa_risk_model.keras"
 SCALER_PATH = BASE_DIR / "data" / "oa_risk_scaler.pkl"
 FEATURES_PATH = BASE_DIR / "data" / "feature_columns.json"
-ASSET_SCALER_PATH = BASE_DIR.parent / "mobile_app" / "assets" / "scaler_params.json"
+ASSET_SCALER_PATH = ROOT_DIR / "mobile_app" / "assets" / "scaler_params.json"
+ASSET_MODEL_PATH = ROOT_DIR / "mobile_app" / "assets" / "model.tflite"
 
 FEATURE_COLUMNS = [
     "age",
@@ -45,25 +44,23 @@ def normalize_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
     if "kl_grade" not in normalized.columns and "KL_grade" in normalized.columns:
         normalized["kl_grade"] = normalized["KL_grade"].astype(int)
-    if "risk_level" not in normalized.columns and "risk_label" in normalized.columns:
-        normalized["risk_level"] = normalized["risk_label"].map({
-            "low": "Low",
-            "medium": "Medium",
-            "high": "High",
-            "Low": "Low",
-            "Medium": "Medium",
-            "High": "High",
-        })
 
-    if "sex_code" not in normalized.columns and "sex" in normalized.columns:
-        sex_map = {"male": 0, "female": 1, "M": 0, "F": 1, 0: 0, 1: 1}
-        normalized["sex_code"] = normalized["sex"].map(sex_map)
+    if "sex_code" not in normalized.columns:
+        if "sex" in normalized.columns:
+            sex_map = {"male": 0, "female": 1, "M": 0, "F": 1, "other": 2, "Other": 2}
+            normalized["sex_code"] = normalized["sex"].map(sex_map).fillna(2)
+        elif "sex_code" in normalized.columns:
+            normalized["sex_code"] = normalized["sex_code"].astype(int)
+        else:
+            normalized["sex_code"] = 0
 
     if "bmi" not in normalized.columns:
         if "BMI" in normalized.columns:
             normalized["bmi"] = normalized["BMI"].astype(float)
         elif {"height_cm", "weight_kg"}.issubset(normalized.columns):
             normalized["bmi"] = normalized["weight_kg"] / ((normalized["height_cm"] / 100.0) ** 2)
+        else:
+            normalized["bmi"] = 25.0
 
     if "prior_injury" not in normalized.columns:
         if "prior_injury_history" in normalized.columns:
@@ -78,52 +75,25 @@ def normalize_dataset(df: pd.DataFrame) -> pd.DataFrame:
     if "womac_function" not in normalized.columns and "functional_limit_score" in normalized.columns:
         normalized["womac_function"] = normalized["functional_limit_score"].astype(float)
 
-    if "duration_sec" not in normalized.columns:
-        if "total_time" in normalized.columns:
-            normalized["duration_sec"] = normalized["total_time"].astype(float)
-        else:
-            normalized["duration_sec"] = 0.0
-
-    if "peak_accel" not in normalized.columns:
-        if "max_acceleration" in normalized.columns:
-            normalized["peak_accel"] = normalized["max_acceleration"].astype(float)
-        else:
-            normalized["peak_accel"] = 0.0
-
+    if "duration_sec" not in normalized.columns and "total_time" in normalized.columns:
+        normalized["duration_sec"] = normalized["total_time"].astype(float)
+    if "peak_accel" not in normalized.columns and "max_acceleration" in normalized.columns:
+        normalized["peak_accel"] = normalized["max_acceleration"].astype(float)
     if "accel_variance" not in normalized.columns:
         if {"max_acceleration", "min_acceleration"}.issubset(normalized.columns):
             normalized["accel_variance"] = (normalized["max_acceleration"] - normalized["min_acceleration"]).abs().astype(float)
         else:
             normalized["accel_variance"] = 0.0
-
     if "cadence_cps" not in normalized.columns:
         if "average_velocity" in normalized.columns and "duration_sec" in normalized.columns:
-            normalized["cadence_cps"] = normalized["average_velocity"] / normalized["duration_sec"].replace(0, np.nan)
+            normalized["cadence_cps"] = normalized["average_velocity"] / normalized["duration_sec"].replace({0: np.nan})
             normalized["cadence_cps"] = normalized["cadence_cps"].fillna(0.0)
         else:
             normalized["cadence_cps"] = 0.0
+    if "kinetic_energy" not in normalized.columns and "average_power" in normalized.columns:
+        normalized["kinetic_energy"] = normalized["average_power"].astype(float)
 
-    if "kinetic_energy" not in normalized.columns:
-        if "average_power" in normalized.columns:
-            normalized["kinetic_energy"] = normalized["average_power"].astype(float)
-        else:
-            normalized["kinetic_energy"] = 0.0
-
-    for column in [
-        "age",
-        "sex_code",
-        "bmi",
-        "prior_injury",
-        "womac_pain",
-        "womac_stiffness",
-        "womac_function",
-        "duration_sec",
-        "peak_accel",
-        "accel_variance",
-        "cadence_cps",
-        "kinetic_energy",
-        "kl_grade",
-    ]:
+    for column in FEATURE_COLUMNS + ["kl_grade"]:
         if column in normalized.columns:
             normalized[column] = pd.to_numeric(normalized[column], errors="coerce").fillna(0)
 
@@ -131,8 +101,12 @@ def normalize_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main():
-    df = pd.read_csv(DATA_PATH)
+    if not DATASET_PATH.exists():
+        raise FileNotFoundError(f"Synthetic dataset not found at {DATASET_PATH}")
+
+    df = pd.read_csv(DATASET_PATH)
     df = normalize_dataset(df)
+
     if "kl_grade" not in df.columns:
         raise ValueError("Dataset must include kl_grade before training.")
 
@@ -151,7 +125,11 @@ def main():
     X_train_scaled = scaler.fit_transform(X_train)
     X_val_scaled = scaler.transform(X_val)
 
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ASSET_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+
     with open(SCALER_PATH, "wb") as scaler_file:
+        import pickle
         pickle.dump(scaler, scaler_file)
 
     with open(FEATURES_PATH, "w", encoding="utf-8") as feature_file:
@@ -162,7 +140,6 @@ def main():
         "mean": scaler.mean_.astype(float).tolist(),
         "scale": scaler.scale_.astype(float).tolist(),
     }
-    ASSET_SCALER_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(ASSET_SCALER_PATH, "w", encoding="utf-8") as asset_file:
         json.dump(scaler_params, asset_file)
 
@@ -193,10 +170,10 @@ def main():
         X_train_scaled,
         y_train,
         validation_data=(X_val_scaled, y_val),
-        epochs=200,
+        epochs=120,
         batch_size=64,
         callbacks=[early_stop],
-        verbose=1,
+        verbose=0,
     )
 
     predictions = model.predict(X_val_scaled, verbose=0)
@@ -208,11 +185,18 @@ def main():
     print(classification_report(y_val, predicted_labels, digits=4))
 
     model.save(MODEL_PATH)
-    print(f"Saved trained Keras model to: {MODEL_PATH}")
+    print(f"Saved Keras model to: {MODEL_PATH}")
     print(f"Saved scaler to: {SCALER_PATH}")
     print(f"Saved feature metadata to: {FEATURES_PATH}")
     print(f"Saved app scaler config to: {ASSET_SCALER_PATH}")
-    print(f"Training epochs completed: {len(history.history['loss'])}")
+
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.target_spec.supported_types = [tf.float32]
+    tflite_model = converter.convert()
+    ASSET_MODEL_PATH.write_bytes(tflite_model)
+    print(f"Saved TFLite model to: {ASSET_MODEL_PATH}")
+    print(f"Synthetic training epochs: {len(history.history['loss'])}")
 
 
 if __name__ == "__main__":
