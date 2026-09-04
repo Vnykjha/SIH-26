@@ -56,3 +56,37 @@ sih-oa-screening/
 Each subfolder is scaffolded but empty — implementation happens in your IDE.
 Suggested order: `docs/data_schema.md` → `ml_model/` → `mobile_app/` → `web_dashboard/`.
 #
+
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    A[Smart Knee Band] --> B[IMU / Motion Sensors]
+    B --> C[Microcontroller]
+    C --> D[Bluetooth Low Energy]
+
+    D --> E[Mobile App]
+    E --> F[Local Offline Database]
+
+    E --> G[Screening Engine]
+    G --> H[AI Risk Model]
+
+    I[Patient Symptoms & History] --> G
+    J[Gait & Movement Features] --> G
+    K[Optional X-Ray] --> G
+
+    H --> L[OA Risk & Functional Assessment]
+    L --> M[Preventive Guidance]
+    L --> N[Referral Recommendati    on]
+    L --> O[Digital Screening Report]
+
+    F --> P{Internet Available?}
+    P -->|No| F
+    P -->|Yes| Q[Backend API]
+    Q --> R[(Central Database)]
+    R --> S[Healthcare Worker Dashboard]
+    R --> T[Analytics & Follow-up]
+```
+
+---
