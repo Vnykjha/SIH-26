@@ -472,7 +472,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
         PopupMenuItem(value: 'ft', child: Text('Feet / inches')),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFE7F3F6),
           borderRadius: BorderRadius.circular(8),
@@ -492,6 +492,7 @@ class _IntakeScreenState extends State<IntakeScreen> {
 
     return DropdownButtonFormField<int>(
       initialValue: selected,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: isFeet ? 'Feet' : 'Inches',
         isDense: true,
