@@ -60,6 +60,7 @@ class _MobilityTestScreenState extends State<MobilityTestScreen> {
   late final TextEditingController _kineticController;
 
   bool _showManualInputs = false;
+  bool _guidelinesExpanded = false;
   bool _evaluating = false;
 
   @override
@@ -109,6 +110,10 @@ class _MobilityTestScreenState extends State<MobilityTestScreen> {
     });
 
     Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_countdownSeconds > 1) {
         setState(() => _countdownSeconds--);
       } else {
@@ -130,6 +135,7 @@ class _MobilityTestScreenState extends State<MobilityTestScreen> {
 
     // Start timer for elapsed duration with auto-stop cutoff
     _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!mounted) return;
       final elapsed = DateTime.now().difference(startTime).inMilliseconds / 1000.0;
       if (elapsed >= maxDuration) {
         setState(() {
@@ -302,316 +308,406 @@ class _MobilityTestScreenState extends State<MobilityTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    const darkText = Color(0xFF243845);
+    const brandTeal = Color(0xFF1D7D8D);
+    const lightTeal = Color(0xFFE7F3F6);
+    const border = Color(0xFFB9D6D7);
+    const danger = Color(0xFFEA6A5A);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Real-Time Mobility Test')),
+      backgroundColor: const Color(0xFFEFF4F5),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
           children: [
-            // Test selection card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Test Selection', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<TestVariant>(
-                      value: _testVariant,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Mobility Protocol',
-                        prefixIcon: Icon(Icons.fitness_center),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: TestVariant.timedUpAndGo,
-                          child: Text(
-                            'Timed Up & Go (TUG)',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: TestVariant.sitToStand,
-                          child: Text(
-                            '30-Second Chair Sit-to-Stand',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                      onChanged: _recordingState == SensorRecordingState.idle || _recordingState == SensorRecordingState.finished
-                          ? (value) => setState(() => _testVariant = value ?? TestVariant.timedUpAndGo)
-                          : null,
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Mobility Test',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      color: darkText,
+                      letterSpacing: -1.0,
                     ),
-                  ],
+                  ),
                 ),
+                Container(
+                  width: 110,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: brandTeal,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Step 3 of 3',
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Live Motion Sensor Recording Console
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    const Icon(Icons.vibration, size: 40, color: Colors.teal),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Live Accelerometer Sensor',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Wear/hold phone at waist or pocket while patient performs motion task',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Recording States
-                    if (_recordingState == SensorRecordingState.idle) ...[
-                      ElevatedButton.icon(
-                        onPressed: _startCountdown,
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Start Motion Recording'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        ),
-                      ),
-                    ] else if (_recordingState == SensorRecordingState.countdown) ...[
-                      Column(
-                        children: [
-                          const Text('Get Ready! Place phone in pocket...', style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 10),
-                          CircleAvatar(
-                            radius: 36,
-                            backgroundColor: Colors.orange,
-                            child: Text(
-                              '$_countdownSeconds',
-                              style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else if (_recordingState == SensorRecordingState.recording) ...[
-                      Column(
-                        children: [
-                          Builder(
-                            builder: (context) {
-                              final double maxDuration = _testVariant == TestVariant.sitToStand ? 30.0 : 20.0;
-                              final double remaining = max(0.0, maxDuration - _elapsedSeconds);
-                              final double progress = (_elapsedSeconds / maxDuration).clamp(0.0, 1.0);
-
-                              return Column(
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 12,
-                                        height: 12,
-                                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'RECORDING: ${_elapsedSeconds.toStringAsFixed(1)}s / ${maxDuration.toInt()}s',
-                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Time Remaining: ${remaining.toStringAsFixed(1)}s',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal),
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  // Test Duration Progress Bar
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: LinearProgressIndicator(
-                                      value: progress,
-                                      backgroundColor: Colors.grey[200],
-                                      color: Colors.teal[600],
-                                      minHeight: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Live Accel: ${_currentMagnitude.toStringAsFixed(2)} m/s² | Peak: ${_livePeakAccel.toStringAsFixed(2)} m/s²',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  Text(
-                                    _testVariant == TestVariant.sitToStand
-                                        ? '⚡ Auto-stops automatically at 30.0 seconds'
-                                        : '⚡ Auto-stops at 20.0 seconds (or tap Stop when finished)',
-                                    style: TextStyle(fontSize: 11, color: Colors.grey[700], fontStyle: FontStyle.italic),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          ElevatedButton.icon(
-                            onPressed: _finishSensorRecording,
-                            icon: const Icon(Icons.stop),
-                            label: const Text('Stop Recording & Calculate'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[700],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else if (_recordingState == SensorRecordingState.finished) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F7F7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: border),
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: _recordingState == SensorRecordingState.idle || _recordingState == SensorRecordingState.finished
+                          ? () => setState(() => _testVariant = TestVariant.sitToStand)
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
+                          color: _testVariant == TestVariant.sitToStand ? lightTeal : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _testVariant == TestVariant.sitToStand ? brandTeal : border),
                         ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Row(
                           children: [
-                            Icon(Icons.check_circle, color: Colors.green),
-                            SizedBox(width: 8),
-                            Text('Motion features successfully recorded!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                            Icon(Icons.access_time_filled_rounded, color: brandTeal, size: 24),
+                            const SizedBox(width: 10),
+                            const Text(
+                              '30-sec Sit-to-Stand',
+                              style: TextStyle(
+                                color: darkText,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Spacer(),
+                            const Text('30s', style: TextStyle(color: darkText, fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _startCountdown,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Re-record Motion Test'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: _recordingState == SensorRecordingState.idle || _recordingState == SensorRecordingState.finished
+                          ? () => setState(() => _testVariant = TestVariant.timedUpAndGo)
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: _testVariant == TestVariant.timedUpAndGo ? lightTeal : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _testVariant == TestVariant.timedUpAndGo ? brandTeal : border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.directions_walk_rounded, color: darkText, size: 24),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Timed Up & Go',
+                              style: TextStyle(
+                                color: darkText,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: border),
+                              ),
+                              child: const Text('TUG', style: TextStyle(color: darkText, fontWeight: FontWeight.w800)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // Measured Features Summary Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Extracted Motion Metrics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        IconButton(
-                          icon: Icon(_showManualInputs ? Icons.tune : Icons.edit_note),
-                          tooltip: 'Adjust / Override values',
-                          onPressed: () => setState(() => _showManualInputs = !_showManualInputs),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    _buildMetricRow('Test Duration', '${_durationController.text} seconds', Icons.timer),
-                    _buildMetricRow('Peak Acceleration', '${_peakAccelController.text} m/s²', Icons.speed),
-                    _buildMetricRow('Acceleration Variance', _varianceController.text, Icons.show_chart),
-                    _buildMetricRow('Cadence (Steps/sec)', '${_cadenceController.text} cps', Icons.directions_walk),
-                    _buildMetricRow('Kinetic Energy Proxy', _kineticController.text, Icons.bolt),
-                  ],
-                ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: border),
               ),
-            ),
-
-            // Optional Manual Overrides drawer
-            if (_showManualInputs) ...[
-              const SizedBox(height: 12),
-              Card(
-                color: Colors.grey[50],
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      const Text('Manual Override / Emulator Tuning', style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _durationController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Duration (seconds)'),
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(color: danger, shape: BoxShape.circle),
                       ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _peakAccelController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Peak Acceleration (m/s²)'),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'RECORDING PROTOCOL',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: darkText,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _varianceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Acceleration Variance'),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _cadenceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Cadence (steps/sec)'),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _kineticController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Kinetic Energy'),
+                      const Spacer(),
+                      const Text(
+                        'Place phone in front pocket',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF607680)),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 24),
-
-            // Submit Button
-            ElevatedButton.icon(
-              onPressed: _evaluating ? null : _runRiskPrediction,
-              icon: _evaluating
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.analytics),
-              label: const Text('Calculate OA Risk Level'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal[800],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                  const SizedBox(height: 18),
+                  if (_recordingState == SensorRecordingState.idle) ...[
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: 190,
+                          height: 190,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 190,
+                                height: 190,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: brandTeal.withOpacity(0.5), width: 6),
+                                ),
+                              ),
+                              Container(
+                                width: 124,
+                                height: 124,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Text(
+                                '${_elapsedSeconds.toStringAsFixed(1)}s',
+                                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: darkText),
+                              ),
+                              Positioned(
+                                bottom: 48,
+                                child: Text(
+                                  'Elapsed',
+                                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        ElevatedButton.icon(
+                          onPressed: _startCountdown,
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: const Text('Start Recording'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: brandTeal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    SizedBox(
+                      width: 200,
+                      height: 200,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 180,
+                            height: 180,
+                            child: CircularProgressIndicator(
+                              value: _recordingState == SensorRecordingState.recording ? (_elapsedSeconds / (_testVariant == TestVariant.sitToStand ? 30.0 : 20.0)).clamp(0.0, 1.0) : 1.0,
+                              strokeWidth: 12,
+                              valueColor: const AlwaysStoppedAnimation<Color>(brandTeal),
+                              backgroundColor: Colors.grey[200],
+                            ),
+                          ),
+                          Text(
+                            '${_elapsedSeconds.toStringAsFixed(1)}s',
+                            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: darkText),
+                          ),
+                          Positioned(
+                            bottom: 32,
+                            child: Text(
+                              'Elapsed',
+                              style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: lightTeal,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'LIVE ACCELEROMETER Z-AXIS (m/s²)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                            color: Color(0xFF3F5E6B),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: border),
+                          ),
+                          child: CustomPaint(
+                            painter: _LineChartPainter(List<double>.from(_magnitudes)),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Auto-stops at 30.0s • Minimum 5 reps required',
+                          style: TextStyle(color: Color(0xFF536B75), fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _recordingState == SensorRecordingState.recording
+                                ? _finishSensorRecording
+                                : null,
+                            icon: const Icon(Icons.stop_circle_outlined),
+                            label: const Text('Stop Early (Save Partial)'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFDEAE7),
+                              foregroundColor: const Color(0xFFD26A5A),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 18),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F7F7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: border),
+              ),
+              child: ExpansionTile(
+                initiallyExpanded: _guidelinesExpanded,
+                onExpansionChanged: (expanded) => setState(() => _guidelinesExpanded = expanded),
+                title: const Text(
+                  'TEST PROTOCOL GUIDELINES',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
+                ),
+                children: const [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Text(
+                      'Place the phone securely in the front pocket. Follow the selected test protocol and keep the phone upright during the movement.',
+                      style: TextStyle(color: Color(0xFF536B75), height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (_recordingState == SensorRecordingState.finished)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _evaluating ? null : _runRiskPrediction,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: brandTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(
+                    _evaluating ? 'Calculating...' : 'Calculate OA Risk Level',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              )
+            else
+              const SizedBox.shrink(),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildMetricRow(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.teal[700]),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
+class _LineChartPainter extends CustomPainter {
+  _LineChartPainter(this.samples);
+
+  final List<double> samples;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF1D7D8D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    final path = Path();
+    if (samples.isEmpty) {
+      path.moveTo(0, size.height * 0.7);
+      path.lineTo(size.width, size.height * 0.7);
+      canvas.drawPath(path, paint);
+      return;
+    }
+
+    final minimum = samples.reduce(min);
+    final maximum = samples.reduce(max);
+    final range = max(0.1, maximum - minimum);
+    for (var index = 0; index < samples.length; index++) {
+      final x = samples.length == 1 ? 0.0 : size.width * index / (samples.length - 1);
+      final y = size.height - ((samples[index] - minimum) / range * size.height * 0.8) - size.height * 0.1;
+      if (index == 0) {
+        path.moveTo(x, y.clamp(0.0, size.height));
+      } else {
+        path.lineTo(x, y.clamp(0.0, size.height));
+      }
+    }
+    canvas.drawPath(path, paint);
   }
+
+  @override
+  bool shouldRepaint(covariant _LineChartPainter oldDelegate) => oldDelegate.samples != samples;
 }

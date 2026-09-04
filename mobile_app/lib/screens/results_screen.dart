@@ -105,7 +105,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
             // Main Risk Outcome Card
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -113,7 +114,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   children: [
                     const Text(
                       'PREDICTED OA RISK ASSESSMENT',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -128,7 +132,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: _riskColor().withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
@@ -136,7 +141,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                           ),
                           child: Text(
                             'KL Grade ${risk.klGrade ?? 0}',
-                            style: TextStyle(color: _riskColor(), fontWeight: FontWeight.bold, fontSize: 14),
+                            style: TextStyle(
+                                color: _riskColor(),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14),
                           ),
                         ),
                       ],
@@ -147,12 +155,63 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Model Confidence: ${(risk.confidence * 100).toStringAsFixed(1)}%'),
+                        Text(
+                            'Model Confidence: ${(risk.confidence * 100).toStringAsFixed(1)}%'),
                         Text('Mode: ${risk.screeningMode.name.toUpperCase()}'),
                       ],
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.teal[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'WOMAC SCORES',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                          child: _scoreValue('Pain', questionnaire.painScore,
+                              20, Colors.red[700]!)),
+                      Expanded(
+                          child: _scoreValue(
+                              'Stiffness',
+                              questionnaire.stiffnessScore,
+                              8,
+                              Colors.orange[800]!)),
+                      Expanded(
+                          child: _scoreValue(
+                              'Function',
+                              questionnaire.functionScore,
+                              68,
+                              Colors.blue[700]!)),
+                      Expanded(
+                          child: _scoreValue(
+                              'Total',
+                              questionnaire.totalWomacScore,
+                              96,
+                              Colors.teal[700]!)),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -172,7 +231,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.psychology, color: Colors.teal[800], size: 24),
+                        Icon(Icons.psychology,
+                            color: Colors.teal[800], size: 24),
                         const SizedBox(width: 8),
                         Text(
                           'AI Risk Clinical Rationale & Explanation',
@@ -187,7 +247,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _generateClinicalExplanation(screening),
-                      style: TextStyle(fontSize: 13, height: 1.4, color: Colors.teal[950]),
+                      style: TextStyle(
+                          fontSize: 13, height: 1.4, color: Colors.teal[950]),
                     ),
                   ],
                 ),
@@ -207,11 +268,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       children: [
                         const Text(
                           'WOMAC Symptom Subscales',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Text(
                           'Total: ${questionnaire.totalWomacScore} / 96',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, color: Colors.teal),
                         ),
                       ],
                     ),
@@ -260,38 +323,57 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   children: [
                     const Text(
                       'Biomechanical & Gait Biomarkers',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 12),
                     _buildFeatureTile(
                       'Body Mass Index (BMI)',
                       '${patient.bmi} kg/m²',
-                      patient.bmi >= 25.0 ? 'Overweight — Adds mechanical joint load' : 'Normal weight range',
-                      patient.bmi >= 25.0 ? Colors.orange[800]! : Colors.green[700]!,
+                      patient.bmi >= 25.0
+                          ? 'Overweight — Adds mechanical joint load'
+                          : 'Normal weight range',
+                      patient.bmi >= 25.0
+                          ? Colors.orange[800]!
+                          : Colors.green[700]!,
                       Icons.monitor_weight_outlined,
                     ),
                     const Divider(),
                     _buildFeatureTile(
                       'Prior Injury History',
-                      patient.priorInjuryHistory ? 'Yes (${patient.injuryNotes.isNotEmpty ? patient.injuryNotes : 'Reported'})' : 'None Reported',
-                      patient.priorInjuryHistory ? 'Elevated secondary OA risk factor' : 'No prior structural trauma',
-                      patient.priorInjuryHistory ? Colors.red[700]! : Colors.green[700]!,
+                      patient.priorInjuryHistory
+                          ? 'Yes (${patient.injuryNotes.isNotEmpty ? patient.injuryNotes : 'Reported'})'
+                          : 'None Reported',
+                      patient.priorInjuryHistory
+                          ? 'Elevated secondary OA risk factor'
+                          : 'No prior structural trauma',
+                      patient.priorInjuryHistory
+                          ? Colors.red[700]!
+                          : Colors.green[700]!,
                       Icons.healing_outlined,
                     ),
                     const Divider(),
                     _buildFeatureTile(
                       'Gait Cadence',
                       '${mobility.cadenceCps.toStringAsFixed(2)} steps/sec',
-                      mobility.cadenceCps < 1.2 ? 'Reduced cadence (signaling gait hesitation/pain)' : 'Normal step frequency',
-                      mobility.cadenceCps < 1.2 ? Colors.orange[800]! : Colors.green[700]!,
+                      mobility.cadenceCps < 1.2
+                          ? 'Reduced cadence (signaling gait hesitation/pain)'
+                          : 'Normal step frequency',
+                      mobility.cadenceCps < 1.2
+                          ? Colors.orange[800]!
+                          : Colors.green[700]!,
                       Icons.directions_walk,
                     ),
                     const Divider(),
                     _buildFeatureTile(
                       'Acceleration Variance',
                       mobility.accelVariance.toStringAsFixed(2),
-                      mobility.accelVariance > 1.5 ? 'Elevated gait variance (indicates movement asymmetry)' : 'Smooth gait acceleration profile',
-                      mobility.accelVariance > 1.5 ? Colors.orange[800]! : Colors.green[700]!,
+                      mobility.accelVariance > 1.5
+                          ? 'Elevated gait variance (indicates movement asymmetry)'
+                          : 'Smooth gait acceleration profile',
+                      mobility.accelVariance > 1.5
+                          ? Colors.orange[800]!
+                          : Colors.green[700]!,
                       Icons.show_chart,
                     ),
                   ],
@@ -307,14 +389,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Patient & Intake Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text('Patient & Intake Profile',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 8),
                     Text('Name: ${patient.name}'),
-                    Text('Age / Gender: ${patient.age} yrs • ${patient.sex.name.toUpperCase()}'),
-                    Text('Occupation: ${patient.occupation.isNotEmpty ? patient.occupation : 'Not specified'}'),
-                    Text('Height / Weight: ${patient.heightCm} cm • ${patient.weightKg} kg'),
-                    Text('District / Camp: ${patient.district} (Camp ${patient.campId})'),
-                    Text('Preferred Language: ${patient.preferredLanguage.toUpperCase()}'),
+                    Text(
+                        'Age / Gender: ${patient.age} yrs • ${patient.sex.name.toUpperCase()}'),
+                    Text(
+                        'Occupation: ${patient.occupation.isNotEmpty ? patient.occupation : 'Not specified'}'),
+                    Text(
+                        'Height / Weight: ${patient.heightCm} cm • ${patient.weightKg} kg'),
+                    Text(
+                        'District / Camp: ${patient.district} (Camp ${patient.campId})'),
+                    Text(
+                        'Preferred Language: ${patient.preferredLanguage.toUpperCase()}'),
                   ],
                 ),
               ),
@@ -330,7 +419,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const ScreeningHistoryScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const ScreeningHistoryScreen()),
                         );
                       },
                       icon: const Icon(Icons.history),
@@ -341,7 +431,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 ],
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+                    onPressed: () =>
+                        Navigator.popUntil(context, (route) => route.isFirst),
                     icon: const Icon(Icons.home),
                     label: const Text('Return Home'),
                     style: ElevatedButton.styleFrom(
@@ -372,50 +463,65 @@ class _ResultsScreenState extends State<ResultsScreen> {
       case RiskLevel.high:
         buffer.writeln('⚠️ HIGH OSTEOARTHRITIS RISK FACTORS IDENTIFIED:');
         if (q.totalWomacScore >= 40) {
-          buffer.writeln('• WOMAC Symptom Burden: High total score of ${q.totalWomacScore}/96 (Pain: ${q.painScore}/20, Function Limitation: ${q.functionScore}/68), indicating significant joint discomfort and activity restriction.');
+          buffer.writeln(
+              '• WOMAC Symptom Burden: High total score of ${q.totalWomacScore}/96 (Pain: ${q.painScore}/20, Function Limitation: ${q.functionScore}/68), indicating significant joint discomfort and activity restriction.');
         } else {
-          buffer.writeln('• WOMAC Symptom Burden: Moderate total score of ${q.totalWomacScore}/96.');
+          buffer.writeln(
+              '• WOMAC Symptom Burden: Moderate total score of ${q.totalWomacScore}/96.');
         }
 
         if (patient.age >= 55) {
-          buffer.writeln('• Age Biomarker: Age ${patient.age} falls in the primary demographic window for age-related articular cartilage degeneration.');
+          buffer.writeln(
+              '• Age Biomarker: Age ${patient.age} falls in the primary demographic window for age-related articular cartilage degeneration.');
         }
         if (patient.bmi >= 25.0) {
-          buffer.writeln('• Biomechanical Load: Elevated BMI (${patient.bmi} kg/m²) increases compressive forces on knee joint cartilage during stance phase.');
+          buffer.writeln(
+              '• Biomechanical Load: Elevated BMI (${patient.bmi} kg/m²) increases compressive forces on knee joint cartilage during stance phase.');
         }
         if (patient.priorInjuryHistory) {
-          buffer.writeln('• Structural Risk: History of prior knee injury increases secondary post-traumatic OA risk.');
+          buffer.writeln(
+              '• Structural Risk: History of prior knee injury increases secondary post-traumatic OA risk.');
         }
         if (m.cadenceCps < 1.2) {
-          buffer.writeln('• Gait Biomarker: Low gait cadence (${m.cadenceCps.toStringAsFixed(1)} steps/sec) reflects guarded gait compensation or pain during movement.');
+          buffer.writeln(
+              '• Gait Biomarker: Low gait cadence (${m.cadenceCps.toStringAsFixed(1)} steps/sec) reflects guarded gait compensation or pain during movement.');
         }
-        buffer.write('Recommendation: Referral for clinical X-ray evaluation and orthopedic consultation.');
+        buffer.write(
+            'Recommendation: Referral for clinical X-ray evaluation and orthopedic consultation.');
         break;
 
       case RiskLevel.medium:
         buffer.writeln('⚡ MODERATE OSTEOARTHRITIS RISK FACTORS:');
-        buffer.writeln('• WOMAC Symptom Burden: Moderate score of ${q.totalWomacScore}/96 (Pain: ${q.painScore}/20, Function: ${q.functionScore}/68).');
+        buffer.writeln(
+            '• WOMAC Symptom Burden: Moderate score of ${q.totalWomacScore}/96 (Pain: ${q.painScore}/20, Function: ${q.functionScore}/68).');
         if (patient.bmi >= 25.0) {
-          buffer.writeln('• Weight Factor: BMI of ${patient.bmi} kg/m² contributes to joint stress.');
+          buffer.writeln(
+              '• Weight Factor: BMI of ${patient.bmi} kg/m² contributes to joint stress.');
         }
         if (m.cadenceCps < 1.5) {
-          buffer.writeln('• Mobility Feature: Cadence of ${m.cadenceCps.toStringAsFixed(1)} steps/sec shows mild gait slowing.');
+          buffer.writeln(
+              '• Mobility Feature: Cadence of ${m.cadenceCps.toStringAsFixed(1)} steps/sec shows mild gait slowing.');
         }
-        buffer.write('Recommendation: Quadriceps strengthening exercises, weight management, and follow-up screening in 6 months.');
+        buffer.write(
+            'Recommendation: Quadriceps strengthening exercises, weight management, and follow-up screening in 6 months.');
         break;
 
       case RiskLevel.low:
         buffer.writeln('✅ LOW OSTEOARTHRITIS RISK PROFILE:');
-        buffer.writeln('• WOMAC Symptom Burden: Minimal score of ${q.totalWomacScore}/96 (Pain: ${q.painScore}/20, Function: ${q.functionScore}/68), indicating healthy joint function.');
-        buffer.writeln('• Gait Biomarker: Normal gait cadence (${m.cadenceCps.toStringAsFixed(1)} steps/sec) and movement acceleration.');
-        buffer.write('Recommendation: Maintain regular physical activity and joint-friendly exercise routines.');
+        buffer.writeln(
+            '• WOMAC Symptom Burden: Minimal score of ${q.totalWomacScore}/96 (Pain: ${q.painScore}/20, Function: ${q.functionScore}/68), indicating healthy joint function.');
+        buffer.writeln(
+            '• Gait Biomarker: Normal gait cadence (${m.cadenceCps.toStringAsFixed(1)} steps/sec) and movement acceleration.');
+        buffer.write(
+            'Recommendation: Maintain regular physical activity and joint-friendly exercise routines.');
         break;
     }
 
     return buffer.toString();
   }
 
-  Widget _buildSubscaleBar(String title, int score, int maxScore, Color color, String description) {
+  Widget _buildSubscaleBar(
+      String title, int score, int maxScore, Color color, String description) {
     final fraction = (score / maxScore).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,7 +529,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             Text(
               '$score / $maxScore',
               style: TextStyle(fontWeight: FontWeight.bold, color: color),
@@ -441,12 +549,29 @@ class _ResultsScreenState extends State<ResultsScreen> {
           ),
         ),
         const SizedBox(height: 2),
-        Text(description, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+        Text(description,
+            style: TextStyle(fontSize: 11, color: Colors.grey[700])),
       ],
     );
   }
 
-  Widget _buildFeatureTile(String title, String value, String description, Color badgeColor, IconData icon) {
+  Widget _scoreValue(String label, int score, int maximum, Color color) {
+    return Column(
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(
+          '$score/$maximum',
+          style: TextStyle(
+              fontSize: 18, fontWeight: FontWeight.bold, color: color),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureTile(String title, String value, String description,
+      Color badgeColor, IconData icon) {
     return Row(
       children: [
         Icon(icon, size: 22, color: badgeColor),
@@ -455,8 +580,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              Text(description, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+              Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(description,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[700])),
             ],
           ),
         ),
@@ -468,7 +596,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
           ),
           child: Text(
             value,
-            style: TextStyle(fontWeight: FontWeight.bold, color: badgeColor, fontSize: 12),
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: badgeColor, fontSize: 12),
           ),
         ),
       ],
