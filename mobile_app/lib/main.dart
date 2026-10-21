@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'l10n/app_localizations.dart';
 import 'screens/intake_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/screening_history_screen.dart';
+import 'services/auth_service.dart';
 import 'services/database_service.dart';
+import 'services/sync_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (error) {
+    debugPrint('Firebase sync unavailable; continuing offline: $error');
+  }
+
+  try {
+    await AuthService.instance.initializeDefaultUser();
+  } catch (error) {
+    debugPrint('Auth bootstrap unavailable: $error');
+  }
+
   runApp(const CrepisenseApp());
 }
 
@@ -19,6 +36,16 @@ class CrepisenseApp extends StatefulWidget {
 
 class _CrepisenseAppState extends State<CrepisenseApp> {
   Locale _locale = const Locale('en');
+  bool _isAuthenticated = false;
+
+  void _onLoginSuccess() {
+    setState(() => _isAuthenticated = true);
+  }
+
+  void _onLogout() {
+    AuthService.instance.logout();
+    setState(() => _isAuthenticated = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,10 +79,17 @@ class _CrepisenseAppState extends State<CrepisenseApp> {
           ),
         ),
       ),
-      home: HomeScreen(
-        locale: _locale,
-        onLocaleChanged: (locale) => setState(() => _locale = locale),
-      ),
+      home: _isAuthenticated
+          ? HomeScreen(
+              locale: _locale,
+              onLocaleChanged: (locale) => setState(() => _locale = locale),
+              onLogout: _onLogout,
+            )
+          : LoginScreen(
+              locale: _locale,
+              onLocaleChanged: (locale) => setState(() => _locale = locale),
+              onLoginSuccess: _onLoginSuccess,
+            ),
     );
   }
 }
@@ -74,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Future<void>.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     });
   }
@@ -160,10 +194,12 @@ class HomeScreen extends StatefulWidget {
     super.key,
     this.locale = const Locale('en'),
     this.onLocaleChanged,
+    this.onLogout,
   });
 
   final Locale locale;
   final ValueChanged<Locale>? onLocaleChanged;
+  final VoidCallback? onLogout;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -172,6 +208,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _screenedToday = 0;
   int _savedCount = 0;
+  int _pendingSyncCount = 0;
+  String? _syncMessage;
 
   @override
   void initState() {
@@ -181,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadStats() async {
     try {
+      final syncResult = await SyncService().syncPendingRecords();
       final screenings = await DatabaseService.instance.getAllScreenings();
       final now = DateTime.now();
       final screenedToday = screenings.where((screening) {
@@ -193,9 +232,17 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _screenedToday = screenedToday;
           _savedCount = screenings.length;
+          _pendingSyncCount =
+              screenings.where((screening) => !screening.isSynced).length;
+          _syncMessage = syncResult.errorMessage;
         });
       }
-    } catch (_) {}
+    } catch (error) {
+      if (mounted) {
+        setState(() =>
+            _syncMessage = 'Unable to refresh screening sync status: $error');
+      }
+    }
   }
 
   @override
@@ -204,6 +251,8 @@ class _HomeScreenState extends State<HomeScreen> {
     const tealDark = Color(0xFF0D4C5C);
     const softBg = Color(0xFFEFF4F5);
     final loc = AppLocalizations.of(context);
+    final workerName =
+        AuthService.instance.currentUser?.name ?? 'Health worker';
 
     return Scaffold(
       backgroundColor: softBg,
@@ -260,7 +309,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Log out',
+                    onPressed: widget.onLogout ??
+                        () {
+                          AuthService.instance.logout();
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                    icon: const Icon(Icons.logout_rounded, color: teal),
+                  ),
                 ],
+              ),
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: teal.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_circle_rounded, color: teal),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Signed in as $workerName',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF203846)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 18),
               Container(
@@ -407,10 +497,23 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Color(0xFF2C8A80))),
                   const SizedBox(width: 10),
                   Expanded(
-                      child: _statCard(
-                          'Pending Sync', '0', const Color(0xFFC56E3B))),
+                      child: _statCard('Pending Sync', '$_pendingSyncCount',
+                          const Color(0xFFC56E3B))),
                 ],
               ),
+              if (_syncMessage != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _syncMessage!,
+                    style: const TextStyle(
+                      color: Color(0xFF9A5A21),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
             ],
           ),

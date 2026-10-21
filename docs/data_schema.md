@@ -66,6 +66,14 @@ Screening {
 - All field names above should be mirrored exactly (snake_case) across
   Dart models, the Python training pipeline, and Firestore documents,
   to avoid translation bugs at sync time.
+- Firestore sync adds transport metadata `uploaded_by` (Firebase Auth UID)
+  and `synced_at` (server timestamp). `recorded_by` remains the health-worker
+  attribution from the screening record; it is not used as the upload
+  authorization identity because offline records may have been created before
+  Firebase sign-in.
+- Firestore sync also writes `recorded_by_name` for the signed-in worker. The
+  dashboard displays this readable name instead of the opaque `recorded_by`
+  UID; if older documents have no name metadata, it shows "Health worker".
 - `accel_features` exact feature engineering (window size, sampling rate,
   which statistics) needs to be finalized in `ml_model/train.py` first —
   the Flutter mobility-test screen must extract the *same* features at

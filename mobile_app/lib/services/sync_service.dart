@@ -1,4 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/screening.dart';
+import 'auth_service.dart';
 import 'database_service.dart';
 
 class SyncResult {
@@ -6,7 +10,10 @@ class SyncResult {
   final int failedCount;
   final String? errorMessage;
 
-  SyncResult({required this.syncedCount, required this.failedCount, this.errorMessage});
+  SyncResult(
+      {required this.syncedCount,
+      required this.failedCount,
+      this.errorMessage});
 }
 
 class SyncService {
@@ -19,19 +26,36 @@ class SyncService {
 
   /// Executes opportunistic background synchronization of unsynced local records to Cloud Firestore.
   Future<SyncResult> syncPendingRecords() async {
+    List<Screening> pendingScreenings = [];
     try {
-      final pendingScreenings = await _dbService.getUnsyncedScreenings();
+      pendingScreenings = await _dbService.getUnsyncedScreenings();
       if (pendingScreenings.isEmpty) {
         return SyncResult(syncedCount: 0, failedCount: 0);
       }
 
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser == null) {
+        return SyncResult(
+          syncedCount: 0,
+          failedCount: pendingScreenings.length,
+          errorMessage:
+              'Sign in with a Firebase account to sync. Records remain saved on this device.',
+        );
+      }
+
       int syncedCount = 0;
       int failedCount = 0;
+      String? firstError;
       final List<String> successfullySyncedIds = [];
 
       for (final screening in pendingScreenings) {
         try {
           final docMap = screening.toMap();
+          docMap['uploaded_by'] = firebaseUser.uid;
+          final worker = AuthService.instance.currentUser;
+          if (worker != null && worker.id == firebaseUser.uid) {
+            docMap['recorded_by_name'] = worker.name;
+          }
           docMap['synced_at'] = FieldValue.serverTimestamp();
 
           await _firestore
@@ -41,8 +65,9 @@ class SyncService {
 
           successfullySyncedIds.add(screening.screeningId);
           syncedCount++;
-        } catch (e) {
+        } catch (error) {
           failedCount++;
+          firstError ??= error.toString();
         }
       }
 
@@ -53,12 +78,13 @@ class SyncService {
       return SyncResult(
         syncedCount: syncedCount,
         failedCount: failedCount,
+        errorMessage: firstError,
       );
-    } catch (e) {
+    } catch (error) {
       return SyncResult(
         syncedCount: 0,
-        failedCount: 0,
-        errorMessage: e.toString(),
+        failedCount: pendingScreenings.length,
+        errorMessage: error.toString(),
       );
     }
   }

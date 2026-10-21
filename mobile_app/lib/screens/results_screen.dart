@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../models/patient.dart';
 import '../models/risk_result.dart';
 import '../models/screening.dart';
+import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/sync_service.dart';
 import 'screening_history_screen.dart';
 
 class ResultsScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class ResultsScreen extends StatefulWidget {
 
 class _ResultsScreenState extends State<ResultsScreen> {
   bool _isSaved = false;
+  String? _syncMessage;
 
   @override
   void initState() {
@@ -35,9 +37,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   Future<void> _autoSave() async {
     try {
-      await DatabaseService.instance.insertScreening(widget.screening);
+      final screeningToSave = Screening(
+        screeningId: widget.screening.screeningId,
+        patient: widget.screening.patient,
+        questionnaire: widget.screening.questionnaire,
+        mobilityTest: widget.screening.mobilityTest,
+        riskResult: widget.screening.riskResult,
+        recordedByUserId: AuthService.instance.currentUser?.id ??
+            widget.screening.recordedByUserId,
+        isSynced: widget.screening.isSynced,
+        createdAt: widget.screening.createdAt,
+      );
+
+      await DatabaseService.instance.insertScreening(screeningToSave);
+      final syncResult = await SyncService().syncPendingRecords();
       if (mounted) {
-        setState(() => _isSaved = true);
+        setState(() {
+          _isSaved = true;
+          _syncMessage = syncResult.errorMessage;
+        });
       }
     } catch (e) {
       debugPrint('Auto-save error: $e');
@@ -88,7 +106,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   Expanded(
                     child: Text(
                       _isSaved
-                          ? 'Saved in Offline Database (ID: ${screening.screeningId.substring(0, 8)}...)'
+                          ? _syncMessage == null
+                              ? 'Saved on this device and synced to the cloud (ID: ${screening.screeningId.substring(0, 8)}...)'
+                              : 'Saved on this device. Cloud sync is pending: $_syncMessage'
                           : 'Saving to Offline Database...',
                       style: const TextStyle(
                         color: Colors.green,

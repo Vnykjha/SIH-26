@@ -10,6 +10,7 @@ class Screening {
   final QuestionnaireResponse questionnaire;
   final MobilityTestResult mobilityTest;
   final RiskResult riskResult;
+  final String? recordedByUserId;
   bool isSynced;
   final DateTime createdAt;
 
@@ -19,6 +20,7 @@ class Screening {
     required this.questionnaire,
     required this.mobilityTest,
     required this.riskResult,
+    this.recordedByUserId,
     this.isSynced = false,
     DateTime? createdAt,
   })  : screeningId = screeningId ?? const Uuid().v4(),
@@ -27,6 +29,7 @@ class Screening {
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'screening_id': screeningId,
+      'recorded_by': recordedByUserId ?? '',
       'synced': isSynced ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
@@ -44,6 +47,7 @@ class Screening {
       questionnaire: QuestionnaireResponse.fromMap(map),
       mobilityTest: MobilityTestResult.fromMap(map),
       riskResult: RiskResult.fromMap(map),
+      recordedByUserId: map['recorded_by'] as String?,
       isSynced: (map['synced'] as int) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
     );

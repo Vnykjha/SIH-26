@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "950317332054",
+    "project_id": "crepisense",
+    "storage_bucket": "crepisense.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:950317332054:android:e71657009477169951adf7",
+        "android_client_info": {
+          "package_name": "com.example.crepisense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtzTUUcihfAikHYPs2EWodQCJ8vz8B8IA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

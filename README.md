@@ -56,3 +56,10 @@ sih-oa-screening/
 Each subfolder is scaffolded but empty — implementation happens in your IDE.
 Suggested order: `docs/data_schema.md` → `ml_model/` → `mobile_app/` → `web_dashboard/`.
 #
+To run the web dashboard -
+cd web_dashboard
+npm.cmd run dev
+
+To run the app - 
+cd mobile_app
+flutter run

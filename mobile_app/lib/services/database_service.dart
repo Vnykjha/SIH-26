@@ -1,5 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+
+import '../models/health_worker.dart';
 import '../models/screening.dart';
 
 class DatabaseService {
@@ -20,7 +22,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -28,8 +30,20 @@ class DatabaseService {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
+      CREATE TABLE health_workers (
+        worker_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'health_worker',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE screenings (
         screening_id TEXT PRIMARY KEY,
+        recorded_by TEXT,
         patient_id TEXT NOT NULL,
         name TEXT NOT NULL,
         age INTEGER NOT NULL,
@@ -78,6 +92,58 @@ class DatabaseService {
         await db.execute('ALTER TABLE screenings ADD COLUMN kl_grade INTEGER');
       } catch (_) {}
     }
+
+    if (oldVersion < 3) {
+      try {
+        await db.execute('''
+          CREATE TABLE health_workers (
+            worker_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'health_worker',
+            created_at TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+
+      try {
+        await db.execute('ALTER TABLE screenings ADD COLUMN recorded_by TEXT');
+      } catch (_) {}
+    }
+  }
+
+  Future<int> insertHealthWorker(HealthWorker worker) async {
+    final db = await instance.database;
+    return await db.insert(
+      'health_workers',
+      worker.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<HealthWorker?> getHealthWorkerByEmail(String email) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'health_workers',
+      where: 'email = ?',
+      whereArgs: [email.trim().toLowerCase()],
+    );
+
+    if (maps.isEmpty) return null;
+    return HealthWorker.fromMap(maps.first);
+  }
+
+  Future<HealthWorker?> authenticateWorker(String email, String passwordHash) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'health_workers',
+      where: 'email = ? AND password_hash = ?',
+      whereArgs: [email.trim().toLowerCase(), passwordHash],
+    );
+
+    if (maps.isEmpty) return null;
+    return HealthWorker.fromMap(maps.first);
   }
 
   Future<int> insertScreening(Screening screening) async {
