@@ -41,7 +41,7 @@ sih-oa-screening/
 |------|--------|-------|
 | 1 | Core (build first) | Intake, questionnaire, on-device risk scoring, offline SQLite storage, patient history |
 | 2 | Prototype | Multilingual UI, phone-IMU mobility test, web dashboard, Firebase sync |
-| 3 | Roadmap only | Dedicated ESP32+IMU hardware puck, GIS/Bhuvan heatmapping, X-ray module, end-to-end encryption |
+| 3 | Roadmap | Dedicated ESP32+IMU hardware puck, GIS/Bhuvan heatmapping, X-ray module, end-to-end encryption |
 
 ## Stack
 
